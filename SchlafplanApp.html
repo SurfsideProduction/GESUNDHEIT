@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Schlafplan">
+<title>Mein Schlafplan</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+:root {
+  --blue:#007AFF; --green:#34C759; --orange:#FF9500;
+  --red:#FF3B30; --purple:#AF52DE; --teal:#5AC8FA;
+  --bg:#F2F2F7; --card:#FFFFFF; --text:#1C1C1E; --text2:#8E8E93; --border:#E5E5EA;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#1C1C1E;--card:#2C2C2E;--text:#FFFFFF;--border:#3A3A3C;}
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:430px;margin:0 auto;overflow-x:hidden;}
+
+/* HEADER */
+.header{background:linear-gradient(140deg,#007AFF 0%,#5856D6 100%);color:white;padding:52px 20px 16px;position:sticky;top:0;z-index:100;}
+.header-row{display:flex;justify-content:space-between;align-items:flex-start;}
+.header h1{font-size:26px;font-weight:700;letter-spacing:-0.5px;}
+.header .date{font-size:13px;opacity:0.8;margin-top:2px;}
+.week-badge{background:rgba(255,255,255,0.25);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:600;white-space:nowrap;}
+.progress-bar{margin-top:12px;background:rgba(255,255,255,0.3);border-radius:10px;height:6px;overflow:hidden;}
+.progress-fill{height:100%;background:white;border-radius:10px;transition:width 0.5s ease;}
+.progress-text{font-size:12px;margin-top:5px;opacity:0.85;}
+
+/* CONTENT */
+.content{padding:14px 14px 100px;}
+.tab-content{display:none;}
+.tab-content.active{display:block;}
+
+/* CARDS */
+.card{background:var(--card);border-radius:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.07);overflow:hidden;}
+
+/* BANNER */
+.install-banner{background:linear-gradient(135deg,#34C759,#30D158);color:white;border-radius:14px;padding:14px 16px;margin-bottom:14px;position:relative;}
+.install-banner strong{display:block;font-size:15px;font-weight:700;margin-bottom:4px;}
+.install-banner p{font-size:13px;line-height:1.5;opacity:0.95;}
+.banner-close{position:absolute;top:10px;right:12px;background:none;border:none;color:white;font-size:18px;cursor:pointer;opacity:0.8;}
+
+/* NOTIF BANNER */
+.notif-banner{border-radius:14px;padding:14px 16px;margin-bottom:14px;position:relative;}
+.notif-banner.denied{background:#FFE5E7;border:1.5px solid #FFAAB0;}
+.notif-banner.granted{background:#E5F8EB;border:1.5px solid #A8EAB8;}
+.notif-banner.default{background:#FFF5E5;border:1.5px solid #FFD9A0;}
+.notif-banner strong{display:block;font-size:14px;font-weight:700;margin-bottom:3px;}
+.notif-banner p{font-size:13px;line-height:1.45;color:var(--text2);}
+.notif-btn{background:var(--blue);color:white;border:none;border-radius:10px;padding:9px 18px;font-size:14px;font-weight:600;margin-top:10px;cursor:pointer;display:inline-block;}
+
+/* OVERDUE CARD */
+.overdue-card{background:linear-gradient(135deg,#FF3B30,#FF6B6B);color:white;border-radius:14px;padding:14px 16px;margin-bottom:12px;}
+.overdue-card strong{display:block;font-size:15px;font-weight:700;margin-bottom:6px;}
+.overdue-item{font-size:14px;padding:2px 0;opacity:0.95;}
+
+/* CATEGORY */
+.cat-header{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;color:var(--text2);padding:16px 4px 8px;}
+.cat-header:first-child{padding-top:4px;}
+
+/* TASK ROWS */
+.task-row{display:flex;align-items:flex-start;padding:13px 14px;gap:12px;cursor:pointer;transition:background 0.1s;}
+.task-row:active{background:var(--bg);}
+.task-circle{width:28px;height:28px;border-radius:50%;border:2.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.2s;margin-top:1px;}
+.task-circle.done{background:var(--green);border-color:var(--green);}
+.task-circle.done::after{content:'✓';color:white;font-size:14px;font-weight:800;}
+.cat-morgen .task-circle{border-color:var(--blue);}
+.cat-morgen .task-circle.done{background:var(--blue);border-color:var(--blue);}
+.cat-tag .task-circle{border-color:var(--green);}
+.cat-tag .task-circle.done{background:var(--green);border-color:var(--green);}
+.cat-abend .task-circle{border-color:var(--orange);}
+.cat-abend .task-circle.done{background:var(--orange);border-color:var(--orange);}
+.cat-nacht .task-circle{border-color:var(--purple);}
+.cat-nacht .task-circle.done{background:var(--purple);border-color:var(--purple);}
+.task-icon{font-size:20px;width:24px;text-align:center;flex-shrink:0;margin-top:2px;}
+.task-info{flex:1;}
+.task-title{font-size:16px;font-weight:500;line-height:1.3;}
+.task-title.done{text-decoration:line-through;color:var(--text2);}
+.task-detail{font-size:13px;color:var(--text2);margin-top:3px;line-height:1.45;}
+.task-time-badge{font-size:11px;color:white;padding:2px 8px;border-radius:20px;font-weight:600;white-space:nowrap;flex-shrink:0;align-self:flex-start;margin-top:3px;}
+.bg-blue{background:var(--blue);} .bg-green{background:var(--green);} .bg-orange{background:var(--orange);} .bg-purple{background:var(--purple);}
+
+/* BOTTOM NAV */
+.bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(255,255,255,0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding:8px 0 max(10px,env(safe-area-inset-bottom));z-index:1000;}
+@media(prefers-color-scheme:dark){.bottom-nav{background:rgba(28,28,30,0.92);}}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer;transition:opacity 0.1s;position:relative;}
+.nav-item:active{opacity:0.6;}
+.nav-icon{font-size:22px;line-height:1;}
+.nav-label{font-size:10px;color:var(--text2);font-weight:500;}
+.nav-item.active .nav-label{color:var(--blue);}
+.nav-badge{position:absolute;top:0;right:calc(50% - 20px);background:var(--red);color:white;border-radius:10px;font-size:10px;font-weight:700;padding:1px 5px;min-width:16px;text-align:center;}
+
+/* FORMS */
+.form-section{background:var(--card);border-radius:14px;padding:18px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.07);}
+.form-section h3{font-size:17px;font-weight:700;margin-bottom:14px;}
+.form-group{margin-bottom:16px;}
+.form-label{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:7px;display:block;text-transform:uppercase;letter-spacing:0.4px;}
+.toggle-row{display:flex;gap:8px;}
+.toggle-btn{flex:1;padding:11px 8px;border-radius:10px;border:1.5px solid var(--border);background:transparent;font-size:14px;font-weight:500;cursor:pointer;color:var(--text);transition:all 0.15s;}
+.toggle-btn.active{background:var(--blue);border-color:var(--blue);color:white;}
+.toggle-btn.active-red{background:var(--red);border-color:var(--red);color:white;}
+.star-row{display:flex;gap:6px;}
+.star-btn{font-size:30px;cursor:pointer;opacity:0.25;transition:all 0.1s;background:none;border:none;padding:0;}
+.star-btn.active{opacity:1;}
+.counter-row{display:flex;align-items:center;gap:20px;}
+.cnt-btn{width:38px;height:38px;border-radius:50%;border:none;font-size:22px;font-weight:700;cursor:pointer;color:white;display:flex;align-items:center;justify-content:center;line-height:1;}
+.cnt-plus{background:var(--blue);} .cnt-minus{background:var(--red);}
+.cnt-val{font-size:26px;font-weight:700;min-width:32px;text-align:center;}
+input[type="text"],input[type="date"],textarea{width:100%;background:var(--bg);border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;font-size:15px;color:var(--text);font-family:-apple-system,sans-serif;outline:none;transition:border-color 0.15s;}
+input[type="text"]:focus,input[type="date"]:focus,textarea:focus{border-color:var(--blue);}
+textarea{resize:none;}
+.btn-primary{background:var(--blue);color:white;border:none;border-radius:12px;padding:14px;font-size:16px;font-weight:600;width:100%;cursor:pointer;transition:opacity 0.1s;}
+.btn-primary:active{opacity:0.8;}
+
+/* DIARY */
+.diary-entry{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:9px;box-shadow:0 1px 4px rgba(0,0,0,0.07);}
+.diary-entry-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
+.diary-date{font-size:15px;font-weight:600;}
+.diary-stars{font-size:16px;letter-spacing:1px;}
+.tags-row{display:flex;gap:6px;flex-wrap:wrap;}
+.tag{font-size:12px;padding:3px 10px;border-radius:20px;font-weight:600;}
+.tag-red{background:#FFE5E7;color:var(--red);} .tag-green{background:#E5F8EB;color:var(--green);} .tag-gray{background:var(--bg);color:var(--text2);}
+.diary-note{font-size:13px;color:var(--text2);margin-top:8px;line-height:1.4;font-style:italic;}
+
+/* SHOPPING */
+.shop-add-row{display:flex;gap:9px;margin-bottom:14px;}
+.shop-add-row input{flex:1;}
+.shop-add-btn{background:var(--blue);color:white;border:none;border-radius:10px;padding:11px 16px;font-size:20px;font-weight:700;cursor:pointer;flex-shrink:0;}
+.shop-row{display:flex;align-items:center;padding:13px 14px;gap:13px;cursor:pointer;transition:background 0.1s;}
+.shop-row:active{background:var(--bg);}
+.shop-check{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all 0.2s;}
+.shop-check.done{background:var(--green);border-color:var(--green);}
+.shop-check.done::after{content:'✓';color:white;font-size:13px;font-weight:800;}
+.shop-text{flex:1;font-size:15px;}
+.shop-text.done{text-decoration:line-through;color:var(--text2);}
+.shop-badge{font-size:11px;padding:3px 8px;border-radius:20px;background:var(--bg);color:var(--text2);font-weight:500;white-space:nowrap;}
+.shop-del{background:none;border:none;color:var(--text2);font-size:16px;cursor:pointer;padding:4px 6px;}
+
+/* NOTES */
+.note-card{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:9px;box-shadow:0 1px 4px rgba(0,0,0,0.07);}
+.note-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:7px;}
+.note-title{font-size:15px;font-weight:700;flex:1;}
+.note-date{font-size:12px;color:var(--text2);margin-left:8px;white-space:nowrap;}
+.note-body{font-size:14px;color:var(--text2);line-height:1.5;}
+.note-del{background:none;border:none;color:var(--red);font-size:16px;cursor:pointer;padding:2px 4px;}
+
+/* CHART */
+.chart-wrap{background:var(--card);border-radius:14px;padding:16px;margin-bottom:12px;box-shadow:0 1px 4px rgba(0,0,0,0.07);}
+.chart-title{font-size:12px;font-weight:700;color:var(--text2);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.4px;}
+.chart-bars{display:flex;align-items:flex-end;gap:4px;height:70px;}
+.chart-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.chart-bar{width:100%;border-radius:4px 4px 0 0;transition:height 0.4s ease;min-height:3px;}
+.chart-bar-label{font-size:9px;color:var(--text2);text-align:center;}
+
+/* SHORTCUTS GUIDE */
+.shortcuts-header{background:linear-gradient(135deg,#FF9500,#FF6B00);color:white;border-radius:14px;padding:16px;margin-bottom:12px;}
+.shortcuts-header strong{display:block;font-size:16px;font-weight:700;margin-bottom:4px;}
+.shortcuts-header p{font-size:13px;opacity:0.9;line-height:1.4;}
+
+.automation-card{background:var(--card);border-radius:14px;margin-bottom:10px;box-shadow:0 1px 4px rgba(0,0,0,0.07);overflow:hidden;}
+.automation-header{display:flex;align-items:center;padding:14px 16px;gap:14px;cursor:pointer;}
+.automation-header:active{background:var(--bg);}
+.automation-time-pill{background:var(--purple);color:white;border-radius:20px;padding:5px 12px;font-size:15px;font-weight:700;flex-shrink:0;}
+.automation-header.blue .automation-time-pill{background:var(--blue);}
+.automation-header.orange .automation-time-pill{background:var(--orange);}
+.automation-header.green .automation-time-pill{background:var(--green);}
+.automation-title{flex:1;}
+.automation-title strong{display:block;font-size:15px;font-weight:600;}
+.automation-title span{font-size:13px;color:var(--text2);}
+.automation-chevron{font-size:12px;color:var(--text2);transition:transform 0.2s;}
+.automation-chevron.open{transform:rotate(90deg);}
+.automation-steps{padding:0 16px 16px;border-top:1px solid var(--border);}
+.step{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);}
+.step:last-child{border-bottom:none;padding-bottom:0;}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--blue);color:white;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.step-text{flex:1;font-size:14px;line-height:1.5;color:var(--text2);}
+.step-text strong{color:var(--text);}
+.notif-preview{background:var(--bg);border-radius:10px;padding:10px 12px;margin-top:8px;}
+.notif-preview .np-app{font-size:11px;color:var(--text2);font-weight:600;text-transform:uppercase;letter-spacing:0.3px;margin-bottom:3px;}
+.notif-preview .np-title{font-size:14px;font-weight:700;}
+.notif-preview .np-body{font-size:13px;color:var(--text2);margin-top:2px;line-height:1.4;}
+
+/* REMINDER TIMES */
+.reminder-row{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);}
+.reminder-row:last-child{border-bottom:none;}
+.reminder-time{font-size:18px;font-weight:700;min-width:54px;color:var(--blue);}
+.reminder-text{font-size:14px;color:var(--text2);flex:1;}
+
+/* WEEK ROW */
+.week-row{display:flex;gap:6px;margin-bottom:16px;}
+.week-day{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 4px;background:var(--card);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+.week-day-label{font-size:10px;color:var(--text2);font-weight:600;text-transform:uppercase;}
+.week-day-pct{font-size:12px;font-weight:700;}
+.week-day-dot{width:10px;height:10px;border-radius:50%;}
+
+/* MISC */
+.sec-title{font-size:20px;font-weight:700;margin-bottom:3px;}
+.sec-sub{font-size:14px;color:var(--text2);margin-bottom:14px;}
+.empty{text-align:center;color:var(--text2);padding:30px 20px;font-size:14px;}
+.empty-icon{font-size:40px;margin-bottom:10px;}
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:rgba(30,30,30,0.92);color:white;padding:10px 22px;border-radius:22px;font-size:14px;z-index:9999;pointer-events:none;white-space:nowrap;transition:opacity 0.35s;backdrop-filter:blur(10px);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.fade-up{animation:fadeUp 0.25s ease;}
+</style>
+</head>
+<body>
+
+<div class="header" id="header">
+  <div class="header-row">
+    <div>
+      <h1 id="headerTitle">🌙 Schlafplan</h1>
+      <div class="date" id="dateDisplay"></div>
+    </div>
+    <div class="week-badge" id="weekBadge"></div>
+  </div>
+  <div class="progress-bar" id="progBar">
+    <div class="progress-fill" id="progFill" style="width:0%"></div>
+  </div>
+  <div class="progress-text" id="progText"></div>
+</div>
+
+<div class="content">
+
+  <!-- ══════════ HEUTE ══════════ -->
+  <div class="tab-content active" id="tab-heute">
+    <div id="install-hint" class="install-banner">
+      <button class="banner-close" onclick="dismissBanner()">✕</button>
+      <strong>📱 Als iPhone-App installieren</strong>
+      <p>Safari → Teilen-Symbol <strong>⬆</strong> → <strong>„Zum Home-Bildschirm"</strong> → Fertig. Dann hast du eine echte App-Ikone!</p>
+    </div>
+    <div id="notif-status-card"></div>
+    <div id="overdue-card"></div>
+    <div id="week-progress-row"></div>
+    <div id="task-list"></div>
+  </div>
+
+  <!-- ══════════ NACHT ══════════ -->
+  <div class="tab-content" id="tab-nacht">
+    <div class="sec-title">Nacht-Tagebuch</div>
+    <div class="sec-sub">1 Eintrag pro Nacht – nach 4 Wochen Gold wert.</div>
+    <div id="chart-section"></div>
+    <div class="form-section">
+      <h3>Letzte Nacht eintragen</h3>
+      <div class="form-group">
+        <label class="form-label">Datum</label>
+        <input type="date" id="diary-date">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Wie oft aufgewacht?</label>
+        <div class="counter-row">
+          <button class="cnt-btn cnt-minus" onclick="changeCnt(-1)">−</button>
+          <span class="cnt-val" id="cnt-val">0</span>
+          <button class="cnt-btn cnt-plus" onclick="changeCnt(1)">+</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Schleim</label>
+        <div class="toggle-row">
+          <button class="toggle-btn" id="s-no" onclick="setToggle('schleim',false)">✓ Kein Schleim</button>
+          <button class="toggle-btn" id="s-yes" onclick="setToggle('schleim',true)">✗ Schleim</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Husten</label>
+        <div class="toggle-row">
+          <button class="toggle-btn" id="h-no" onclick="setToggle('husten',false)">✓ Kein Husten</button>
+          <button class="toggle-btn" id="h-yes" onclick="setToggle('husten',true)">✗ Husten</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Schlafqualität (Sterne)</label>
+        <div class="star-row" id="star-row">
+          <button class="star-btn" onclick="setStar(1)">⭐</button>
+          <button class="star-btn" onclick="setStar(2)">⭐</button>
+          <button class="star-btn" onclick="setStar(3)">⭐</button>
+          <button class="star-btn" onclick="setStar(4)">⭐</button>
+          <button class="star-btn" onclick="setStar(5)">⭐</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notiz (optional)</label>
+        <textarea id="diary-note" rows="3" placeholder="Was war anders? Neue Symptome?"></textarea>
+      </div>
+      <button class="btn-primary" onclick="saveDiaryEntry()">Eintrag speichern</button>
+    </div>
+    <div id="diary-history"></div>
+  </div>
+
+  <!-- ══════════ BESORGUNGEN ══════════ -->
+  <div class="tab-content" id="tab-besorgungen">
+    <div class="sec-title">Besorgungen</div>
+    <div class="sec-sub">Alles was du für den Start brauchst.</div>
+    <div class="shop-add-row">
+      <input type="text" id="shop-input" placeholder="Neue Aufgabe hinzufügen…" onkeydown="if(event.key==='Enter') addShop()">
+      <button class="shop-add-btn" onclick="addShop()">+</button>
+    </div>
+    <div id="shop-list"></div>
+  </div>
+
+  <!-- ══════════ NOTIZEN ══════════ -->
+  <div class="tab-content" id="tab-notizen">
+    <div class="sec-title">Diagnosen & Notizen</div>
+    <div class="sec-sub">Befunde, Arztgespräche, Medikamentenänderungen.</div>
+    <div class="form-section">
+      <div class="form-group">
+        <label class="form-label">Titel</label>
+        <input type="text" id="note-title" placeholder="z.B. Arztgespräch, Neues Medikament, Befund…">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Text</label>
+        <textarea id="note-body" rows="5" placeholder="Was wurde besprochen, geändert oder festgestellt?"></textarea>
+      </div>
+      <button class="btn-primary" onclick="saveNote()">Notiz speichern</button>
+    </div>
+    <div id="notes-list"></div>
+  </div>
+
+  <!-- ══════════ ERINNERUNGEN ══════════ -->
+  <div class="tab-content" id="tab-reminder">
+    <div class="sec-title">Push-Nachrichten</div>
+    <div class="sec-sub">Zwei Wege – kombiniere beide für maximale Wirkung.</div>
+
+    <!-- Option 3: In-App Notifications -->
+    <div class="form-section" style="margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="font-size:24px;">📲</span>
+        <div>
+          <strong style="display:block;font-size:16px;">Option A – App-Benachrichtigungen</strong>
+          <span style="font-size:13px;color:var(--text2);">Erinnerung beim App-Öffnen für überfällige Aufgaben</span>
+        </div>
+      </div>
+      <div id="notif-perm-section"></div>
+    </div>
+
+    <!-- Option 2: Shortcuts -->
+    <div class="shortcuts-header">
+      <strong>🍎 Option B – iOS Kurzbefehle</strong>
+      <p>Diese Automationen senden echte Push-Nachrichten – auch wenn die App geschlossen ist. Einmal einrichten, danach automatisch täglich.</p>
+    </div>
+
+    <!-- Automation 1: 06:30 -->
+    <div class="automation-card">
+      <div class="automation-header blue" onclick="toggleAuto('a1')">
+        <div class="automation-time-pill">06:30</div>
+        <div class="automation-title">
+          <strong>💊 Medikamente</strong>
+          <span>Dexilant + Perindopril</span>
+        </div>
+        <span class="automation-chevron" id="chev-a1">›</span>
+      </div>
+      <div class="automation-steps" id="steps-a1" style="display:none;">
+        <div style="padding:12px 0 8px;font-size:13px;color:var(--text2);">Gehe auf deinem iPhone zur <strong style="color:var(--text)">Kurzbefehle-App</strong> und tippe auf <strong style="color:var(--text)">„Automation"</strong> (unten Mitte).</div>
+        <div class="step"><div class="step-num">1</div><div class="step-text">Tippe auf <strong>„+"</strong> oben rechts → <strong>„Neue Automation"</strong></div></div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Wähle <strong>„Tageszeit"</strong> → Zeit auf <strong>06:30</strong> stellen → <strong>„Täglich"</strong> → <strong>„Weiter"</strong></div></div>
+        <div class="step"><div class="step-num">3</div><div class="step-text">Tippe auf <strong>„Aktion hinzufügen"</strong> → Suche nach <strong>„Benachrichtigung"</strong> → wähle <strong>„Benachrichtigung anzeigen"</strong></div></div>
+        <div class="step"><div class="step-num">4</div><div class="step-text">Tippe auf <strong>„Hallo"</strong> und ersetze mit dem Titel. Tippe auf <strong>„Mehr anzeigen"</strong> für den Textkörper.</div></div>
+        <div class="notif-preview">
+          <div class="np-app">SCHLAFPLAN</div>
+          <div class="np-title">💊 Medikamente – jetzt!</div>
+          <div class="np-body">Dexilant 60mg + Perindopril 8mg nüchtern mit Glas Wasser. 30 Min vor Frühstück.</div>
+        </div>
+        <div class="step" style="margin-top:8px;"><div class="step-num">5</div><div class="step-text">Tippe <strong>„Weiter"</strong> → Deaktiviere <strong>„Vor Ausführung fragen"</strong> → <strong>„Fertig"</strong></div></div>
+      </div>
+    </div>
+
+    <!-- Automation 2: 19:00 -->
+    <div class="automation-card">
+      <div class="automation-header orange" onclick="toggleAuto('a2')">
+        <div class="automation-time-pill">19:00</div>
+        <div class="automation-title">
+          <strong>🚫 Abendessen-Ende</strong>
+          <span>Letzte Mahlzeit – Küche zu</span>
+        </div>
+        <span class="automation-chevron" id="chev-a2">›</span>
+      </div>
+      <div class="automation-steps" id="steps-a2" style="display:none;">
+        <div style="padding:12px 0 8px;font-size:13px;color:var(--text2);">Erstelle eine neue Automation wie oben (Schritte 1–5), aber mit diesen Werten:</div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Zeit: <strong>19:00</strong> → Täglich</div></div>
+        <div class="notif-preview">
+          <div class="np-app">SCHLAFPLAN</div>
+          <div class="np-title">🚫 Essensfenster schliesst in 1h</div>
+          <div class="np-body">Abendessen jetzt abschliessen. Ab 20:00 nichts mehr essen – nur noch Wasser.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Automation 3: 21:30 -->
+    <div class="automation-card">
+      <div class="automation-header" onclick="toggleAuto('a3')">
+        <div class="automation-time-pill">21:30</div>
+        <div class="automation-title">
+          <strong>🌊 Nasenspülung</strong>
+          <span>Salzwasser-Routine</span>
+        </div>
+        <span class="automation-chevron" id="chev-a3">›</span>
+      </div>
+      <div class="automation-steps" id="steps-a3" style="display:none;">
+        <div style="padding:12px 0 8px;font-size:13px;color:var(--text2);">Erstelle eine neue Automation mit diesen Werten:</div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Zeit: <strong>21:30</strong> → Täglich</div></div>
+        <div class="notif-preview">
+          <div class="np-app">SCHLAFPLAN</div>
+          <div class="np-title">🌊 Nasenspülung – jetzt!</div>
+          <div class="np-body">Salzwasserspülung durchführen. Danach nur noch einen kleinen Schluck Wasser.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Automation 4: 22:00 -->
+    <div class="automation-card">
+      <div class="automation-header" onclick="toggleAuto('a4')">
+        <div class="automation-time-pill">22:00</div>
+        <div class="automation-title">
+          <strong>💊 Nacht-Routine</strong>
+          <span>Gaviscon + Zähne + Schiene + Hygro</span>
+        </div>
+        <span class="automation-chevron" id="chev-a4">›</span>
+      </div>
+      <div class="automation-steps" id="steps-a4" style="display:none;">
+        <div style="padding:12px 0 8px;font-size:13px;color:var(--text2);">Erstelle eine neue Automation mit diesen Werten:</div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Zeit: <strong>22:00</strong> → Täglich</div></div>
+        <div class="notif-preview">
+          <div class="np-app">SCHLAFPLAN</div>
+          <div class="np-title">🌙 Nacht-Routine starten</div>
+          <div class="np-body">① Zähne putzen ② Gaviscon 10ml ③ Schlafschiene ④ Hygrometer checken (40–55%). Danach nichts mehr trinken!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Automation 5: 22:30 -->
+    <div class="automation-card" style="margin-bottom:20px;">
+      <div class="automation-header green" onclick="toggleAuto('a5')">
+        <div class="automation-time-pill" style="background:var(--green)">22:30</div>
+        <div class="automation-title">
+          <strong>😴 Schlafen gehen</strong>
+          <span>Letzte Erinnerung des Tages</span>
+        </div>
+        <span class="automation-chevron" id="chev-a5">›</span>
+      </div>
+      <div class="automation-steps" id="steps-a5" style="display:none;">
+        <div style="padding:12px 0 8px;font-size:13px;color:var(--text2);">Erstelle eine neue Automation mit diesen Werten:</div>
+        <div class="step"><div class="step-num">2</div><div class="step-text">Zeit: <strong>22:30</strong> → Täglich</div></div>
+        <div class="notif-preview">
+          <div class="np-app">SCHLAFPLAN</div>
+          <div class="np-title">😴 Jetzt schlafen gehen</div>
+          <div class="np-body">Alles erledigt? Licht aus. Gute Nacht – du machst das gut. 🌙</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- All times reference -->
+    <div class="form-section">
+      <div class="chart-title">Alle wichtigen Zeiten</div>
+      <div class="reminder-row"><span class="reminder-time">06:30</span><span class="reminder-text">💊 Dexilant + Perindopril nüchtern</span></div>
+      <div class="reminder-row"><span class="reminder-time">07:30</span><span class="reminder-text">🫙 Wasserflasche mitnehmen</span></div>
+      <div class="reminder-row"><span class="reminder-time">12:00</span><span class="reminder-text">🍽️ Hauptmahlzeit</span></div>
+      <div class="reminder-row"><span class="reminder-time">19:00</span><span class="reminder-text">🚫 Letzte Mahlzeit spätestens jetzt</span></div>
+      <div class="reminder-row"><span class="reminder-time">21:30</span><span class="reminder-text">🌊 Nasenspülung</span></div>
+      <div class="reminder-row"><span class="reminder-time">22:00</span><span class="reminder-text">💊 Gaviscon → Zähne → Schiene → Hygro</span></div>
+      <div class="reminder-row"><span class="reminder-time">22:30</span><span class="reminder-text">😴 Schlafen gehen</span></div>
+    </div>
+
+  </div><!-- end tab-reminder -->
+
+</div><!-- end content -->
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-item active" onclick="switchTab('heute',this)">
+    <span class="nav-icon">☀️</span><span class="nav-label">Heute</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('nacht',this)">
+    <span class="nav-icon">📓</span><span class="nav-label">Nacht</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('besorgungen',this)" id="nav-besorg">
+    <span class="nav-icon">🛒</span><span class="nav-label">Besorgungen</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('notizen',this)">
+    <span class="nav-icon">📋</span><span class="nav-label">Notizen</span>
+  </div>
+  <div class="nav-item" onclick="switchTab('reminder',this)">
+    <span class="nav-icon">🔔</span><span class="nav-label">Alarm</span>
+  </div>
+</nav>
+
+<script>
+// ──────────────────────────────────────────────────────
+//  DATA
+// ──────────────────────────────────────────────────────
+const TASKS = [
+  {id:'dexilant',   time:'06:30',title:'Dexilant 60 mg',          detail:'Nüchtern, Glas Wasser. 30 Min vor Frühstück.',          cat:'morgen',icon:'💊'},
+  {id:'perindopril',time:'06:30',title:'Perindopril 8 mg',         detail:'Gleicher Zeitpunkt. Nie eigenmächtig absetzen!',         cat:'morgen',icon:'💊'},
+  {id:'wasser0',    time:'06:30',title:'Glas Wasser trinken',      detail:'Direkt nach dem Aufstehen – vor allem anderen.',         cat:'morgen',icon:'💧'},
+  {id:'flasche',    time:'07:30',title:'Wasserflasche mitnehmen',  detail:'1.5L auf den Schreibtisch. Abends leer = gut.',          cat:'morgen',icon:'🫙'},
+  {id:'pause9',     time:'09:00',title:'Pause: Wasser / Tee',      detail:'Kein Koffein nach 12 Uhr.',                              cat:'tag',   icon:'🍵'},
+  {id:'mittag',     time:'12:00',title:'Hauptmahlzeit',            detail:'Eiweissbetont, nicht zu fett oder scharf.',              cat:'tag',   icon:'🍽️'},
+  {id:'snack',      time:'15:15',title:'Kleiner Snack (optional)', detail:'Nüsse, Apfel, Joghurt oder Käse.',                      cat:'tag',   icon:'🍎'},
+  {id:'spazier',    time:'17:00',title:'Feierabend + Spaziergang', detail:'Wenn möglich kurzer Spaziergang.',                      cat:'abend', icon:'🚶'},
+  {id:'abendessen', time:'18:30',title:'Leichtes Abendessen',      detail:'Suppe, Salat + Protein. Spätestens 20:00 fertig.',      cat:'abend', icon:'🥗'},
+  {id:'essen-stop', time:'20:00',title:'Essensfenster geschlossen',detail:'Nichts mehr essen. Nur kleine Schlucke Wasser.',        cat:'abend', icon:'🚫'},
+  {id:'nasenspül',  time:'21:30',title:'Nasenspülung (Salzwasser)',detail:'Letzter Schluck Wasser danach.',                         cat:'nacht', icon:'🌊'},
+  {id:'zaehne',     time:'22:00',title:'Zähneputzen',              detail:'Vor Gaviscon erledigen.',                               cat:'nacht', icon:'🦷'},
+  {id:'gaviscon',   time:'22:00',title:'Gaviscon (10 ml)',          detail:'Allerletztes nach Zähneputzen. Danach nichts mehr!',   cat:'nacht', icon:'💊'},
+  {id:'schiene',    time:'22:00',title:'Schlafschiene einsetzen',  detail:'Zahnärztliche Unterkiefer-Schiene.',                    cat:'nacht', icon:'😴'},
+  {id:'hygro',      time:'22:00',title:'Hygrometer checken',       detail:'Optimal 40–55 %. Darunter: Luftbefeuchter an!',         cat:'nacht', icon:'💨'},
+];
+const CAT_LABELS={morgen:'🌅 Morgen',tag:'☀️ Tagsüber',abend:'🌆 Abend',nacht:'🌙 Nacht'};
+const CAT_COLOR ={morgen:'bg-blue',  tag:'bg-green',     abend:'bg-orange',nacht:'bg-purple'};
+
+const DEFAULT_SHOP=[
+  {id:'s1',text:'Gaviscon Advance Suspension',    badge:'Apotheke',        done:false},
+  {id:'s2',text:'Hygrometer (ca. 10 CHF)',        badge:'Digitec / Migros',done:false},
+  {id:'s3',text:'Wochen-Pillendose (7 Fächer)',   badge:'Apotheke',        done:false},
+  {id:'s4',text:'Verdunster-Luftbefeuchter',      badge:'Bei Luft < 40%',  done:false},
+  {id:'s5',text:'SomniFix Mund-Tape (testen)',    badge:'Optional',        done:false},
+  {id:'s6',text:'1.5L Wasserflasche Schreibtisch',badge:'Drogerie',        done:false},
+  {id:'s7',text:'Holzklötze 15–20 cm fürs Bett', badge:'Baumarkt',        done:false},
+];
+
+// ──────────────────────────────────────────────────────
+//  STORAGE HELPERS
+// ──────────────────────────────────────────────────────
+const p2 = n => String(n).padStart(2,'0');
+const isoToday = () => { const d=new Date(); return `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`; };
+const todayKey = () => 'sp_day_'+isoToday();
+const get  = (k,fb) => { try{const v=localStorage.getItem(k); return v?JSON.parse(v):fb;}catch(e){return fb;} };
+const set  = (k,v)  => { try{localStorage.setItem(k,JSON.stringify(v));}catch(e){} };
+const getChecks = () => get(todayKey(),{});
+const setChecks = v  => set(todayKey(),v);
+const getDiary  = () => get('sp_diary',[]);
+const saveDiary = v  => set('sp_diary',v);
+const getShop   = () => { const v=get('sp_shop',null); return v||DEFAULT_SHOP.map(x=>({...x})); };
+const saveShop  = v  => set('sp_shop',v);
+const getNotes  = () => get('sp_notes',[]);
+const saveNotes = v  => set('sp_notes',v);
+
+// ──────────────────────────────────────────────────────
+//  STATE
+// ──────────────────────────────────────────────────────
+let diaryCnt=0, diarySchleim=null, diaryHusten=null, diaryStar=0;
+
+// ──────────────────────────────────────────────────────
+//  NOTIFICATIONS (Option 3)
+// ──────────────────────────────────────────────────────
+async function requestNotifPerm() {
+  if (!('Notification' in window)) return;
+  const perm = await Notification.requestPermission();
+  renderNotifStatus();
+  if (perm==='granted') {
+    toast('🔔 Benachrichtigungen aktiviert!');
+    checkOverdue();
+  }
+}
+
+function renderNotifStatus() {
+  const el = document.getElementById('notif-status-card');
+  const permEl = document.getElementById('notif-perm-section');
+  if (!('Notification' in window)) {
+    if (permEl) permEl.innerHTML='<p style="font-size:13px;color:var(--text2)">Benachrichtigungen werden in diesem Browser nicht unterstützt. Bitte als PWA auf dem Home-Bildschirm installieren (iOS 16.4+).</p>';
+    return;
+  }
+  const perm = Notification.permission;
+  if (perm==='granted') {
+    el.innerHTML='';
+    if (permEl) permEl.innerHTML=`
+      <div style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg);border-radius:10px;">
+        <span style="font-size:22px;">✅</span>
+        <div>
+          <strong style="display:block;font-size:14px;">Benachrichtigungen aktiv</strong>
+          <span style="font-size:13px;color:var(--text2);">Beim App-Öffnen wird auf überfällige Aufgaben geprüft.</span>
+        </div>
+      </div>`;
+  } else if (perm==='denied') {
+    const html=`<div class="notif-banner denied"><strong>🚫 Benachrichtigungen blockiert</strong><p>Gehe zu Einstellungen → Safari → Benachrichtigungen und erlaube diese App.</p></div>`;
+    el.innerHTML=html;
+    if (permEl) permEl.innerHTML=html;
+  } else {
+    const html=`<div class="notif-banner default"><strong>🔔 Benachrichtigungen erlauben?</strong><p>Beim Öffnen der App erhältst du eine Erinnerung für überfällige Aufgaben.</p><button class="notif-btn" onclick="requestNotifPerm()">Jetzt erlauben</button></div>`;
+    el.innerHTML=html;
+    if (permEl) permEl.innerHTML=html;
+  }
+}
+
+function checkOverdue() {
+  if (!('Notification' in window) || Notification.permission!=='granted') return;
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const checks = getChecks();
+
+  // Find tasks whose time has passed today (within 3h window) and not yet done
+  const overdue = TASKS.filter(t => {
+    if (checks[t.id]) return false;
+    const [h,m] = t.time.split(':').map(Number);
+    const taskMin = h*60+m;
+    return taskMin <= nowMin && (nowMin - taskMin) <= 180; // within 3 hours
+  });
+
+  if (overdue.length===0) return;
+
+  // Group by category for cleaner notification
+  const grouped = {};
+  for (const t of overdue) {
+    if (!grouped[t.cat]) grouped[t.cat]=[];
+    grouped[t.cat].push(t);
+  }
+
+  for (const [cat, tasks] of Object.entries(grouped)) {
+    const title = `🌙 Noch offen: ${CAT_LABELS[cat]}`;
+    const body  = tasks.map(t => `${t.icon} ${t.title} (${t.time})`).join('\n');
+    try {
+      new Notification(title, { body, tag:'overdue-'+cat, silent:false });
+    } catch(e){}
+  }
+}
+
+// Render overdue card in Heute tab
+function renderOverdueCard() {
+  const el = document.getElementById('overdue-card');
+  if (!el) return;
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const checks = getChecks();
+  const overdue = TASKS.filter(t => {
+    if (checks[t.id]) return false;
+    const [h,m] = t.time.split(':').map(Number);
+    const taskMin = h*60+m;
+    return taskMin <= nowMin && (nowMin - taskMin) <= 180;
+  });
+  if (!overdue.length) { el.innerHTML=''; return; }
+  let html = `<div class="overdue-card fade-up"><strong>⚠️ ${overdue.length} Aufgabe${overdue.length>1?'n':''} überfällig</strong>`;
+  for (const t of overdue) html += `<div class="overdue-item">${t.icon} ${t.title} · ${t.time}</div>`;
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// Schedule in-page reminder for next upcoming task
+function scheduleNextReminder() {
+  if (!('Notification' in window) || Notification.permission!=='granted') return;
+  const now = new Date();
+  const nowMin = now.getHours()*60 + now.getMinutes();
+  const checks = getChecks();
+
+  const upcoming = TASKS
+    .filter(t => !checks[t.id])
+    .map(t => { const [h,m]=t.time.split(':').map(Number); return {...t, min:h*60+m}; })
+    .filter(t => t.min > nowMin)
+    .sort((a,b)=>a.min-b.min);
+
+  if (!upcoming.length) return;
+  const next = upcoming[0];
+  const msUntil = (next.min - nowMin) * 60000 - (now.getSeconds()*1000 + now.getMilliseconds());
+  if (msUntil > 0 && msUntil < 4*3600000) { // only schedule if within 4h
+    setTimeout(() => {
+      try {
+        new Notification(`🌙 Schlafplan – ${next.time}`, {
+          body: `${next.icon} ${next.title}: ${next.detail}`,
+          tag: 'scheduled-'+next.id
+        });
+      } catch(e){}
+      scheduleNextReminder(); // chain to next
+    }, msUntil);
+  }
+}
+
+// ──────────────────────────────────────────────────────
+//  TODAY TAB
+// ──────────────────────────────────────────────────────
+function renderTasks() {
+  const checks = getChecks();
+  let html='', prevCat=null;
+  for (const t of TASKS) {
+    if (t.cat!==prevCat) { html+=`<div class="cat-header">${CAT_LABELS[t.cat]}</div>`; prevCat=t.cat; }
+    const done=!!checks[t.id];
+    html+=`
+    <div class="card cat-${t.cat}" onclick="toggleTask('${t.id}')">
+      <div class="task-row">
+        <div class="task-circle ${done?'done':''}"></div>
+        <div class="task-icon">${t.icon}</div>
+        <div class="task-info">
+          <div class="task-title ${done?'done':''}">${t.title}</div>
+          <div class="task-detail">${t.detail}</div>
+        </div>
+        <div class="task-time-badge ${CAT_COLOR[t.cat]}">${t.time}</div>
+      </div>
+    </div>`;
+  }
+  document.getElementById('task-list').innerHTML=html;
+  updateProg(checks);
+  renderWeekRow();
+  renderOverdueCard();
+}
+
+function toggleTask(id) {
+  const c=getChecks(); c[id]=!c[id]; setChecks(c); renderTasks();
+}
+
+function updateProg(checks) {
+  const total=TASKS.length, done=TASKS.filter(t=>checks[t.id]).length, pct=Math.round(done/total*100);
+  document.getElementById('progFill').style.width=pct+'%';
+  document.getElementById('progText').textContent=`${done} von ${total} erledigt · ${pct}%`;
+}
+
+function renderWeekRow() {
+  const days=['Mo','Di','Mi','Do','Fr','Sa','So'];
+  const today=new Date();
+  let html='<div class="week-row">';
+  for (let i=6;i>=0;i--) {
+    const d=new Date(today); d.setDate(d.getDate()-i);
+    const key=`sp_day_${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+    const checks=get(key,{});
+    const done=TASKS.filter(t=>checks[t.id]).length;
+    const pct=Math.round(done/TASKS.length*100);
+    const isToday=i===0;
+    const dot=pct>=80?'#34C759':pct>=40?'#FF9500':'#E5E5EA';
+    const label=days[d.getDay()===0?6:d.getDay()-1];
+    html+=`<div class="week-day" style="${isToday?'border:2px solid var(--blue);':''}">
+      <div class="week-day-label">${isToday?'Heute':label}</div>
+      <div class="week-day-dot" style="background:${dot}"></div>
+      <div class="week-day-pct" style="color:${pct>0?'var(--text)':'var(--text2)'}">${pct>0?pct+'%':'–'}</div>
+    </div>`;
+  }
+  html+='</div>';
+  document.getElementById('week-progress-row').innerHTML=html;
+}
+
+// ──────────────────────────────────────────────────────
+//  DIARY
+// ──────────────────────────────────────────────────────
+function initDiaryDate() {
+  const y=new Date(); y.setDate(y.getDate()-1);
+  document.getElementById('diary-date').value=`${y.getFullYear()}-${p2(y.getMonth()+1)}-${p2(y.getDate())}`;
+}
+function changeCnt(d){diaryCnt=Math.max(0,diaryCnt+d);document.getElementById('cnt-val').textContent=diaryCnt;}
+function setToggle(type,val){
+  if(type==='schleim'){diarySchleim=val;document.getElementById('s-yes').className='toggle-btn'+(val?' active-red':'');document.getElementById('s-no').className='toggle-btn'+(!val?' active':'');}
+  else{diaryHusten=val;document.getElementById('h-yes').className='toggle-btn'+(val?' active-red':'');document.getElementById('h-no').className='toggle-btn'+(!val?' active':'');}
+}
+function setStar(n){diaryStar=n;document.querySelectorAll('.star-btn').forEach((b,i)=>b.classList.toggle('active',i<n));}
+
+function saveDiaryEntry() {
+  const date=document.getElementById('diary-date').value;
+  if(!date){alert('Bitte Datum wählen.');return;}
+  if(diaryStar===0){alert('Bitte Schlafqualität (Sterne) angeben.');return;}
+  const diary=getDiary();
+  const idx=diary.findIndex(e=>e.date===date);
+  const entry={date,woke:diaryCnt,schleim:diarySchleim,husten:diaryHusten,quality:diaryStar,note:document.getElementById('diary-note').value.trim()};
+  if(idx>=0)diary[idx]=entry; else diary.unshift(entry);
+  diary.sort((a,b)=>b.date.localeCompare(a.date));
+  saveDiary(diary);
+  diaryCnt=0;diarySchleim=null;diaryHusten=null;diaryStar=0;
+  document.getElementById('cnt-val').textContent='0';
+  ['s-yes','s-no','h-yes','h-no'].forEach(id=>document.getElementById(id).className='toggle-btn');
+  document.querySelectorAll('.star-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('diary-note').value='';
+  initDiaryDate();
+  renderDiaryHistory(); renderChart();
+  toast('✅ Nacht-Eintrag gespeichert!');
+}
+
+function fmtDate(str){
+  const [y,m,d]=str.split('-');
+  return new Date(y,m-1,d).toLocaleDateString('de-CH',{weekday:'short',day:'numeric',month:'short'});
+}
+
+function renderDiaryHistory() {
+  const diary=getDiary(), el=document.getElementById('diary-history');
+  if(!diary.length){el.innerHTML='<div class="empty"><div class="empty-icon">🌙</div>Noch keine Einträge.</div>';return;}
+  let html='<div class="sec-title" style="margin:4px 0 12px">Verlauf</div>';
+  for(const e of diary){
+    const stars='⭐'.repeat(e.quality)+'☆'.repeat(5-e.quality);
+    const st=e.schleim===true?'<span class="tag tag-red">Schleim</span>':e.schleim===false?'<span class="tag tag-green">Kein Schleim</span>':'';
+    const ht=e.husten===true?'<span class="tag tag-red">Husten</span>':e.husten===false?'<span class="tag tag-green">Kein Husten</span>':'';
+    const wt=`<span class="tag tag-gray">${e.woke}× wach</span>`;
+    html+=`<div class="diary-entry fade-up"><div class="diary-entry-header"><span class="diary-date">${fmtDate(e.date)}</span><span class="diary-stars">${stars}</span></div><div class="tags-row">${wt}${st}${ht}</div>${e.note?`<div class="diary-note">"${e.note}"</div>`:''}</div>`;
+  }
+  el.innerHTML=html;
+}
+
+function renderChart() {
+  const diary=getDiary().slice(0,14).reverse(), el=document.getElementById('chart-section');
+  if(diary.length<2){el.innerHTML='';return;}
+  let html='<div class="chart-wrap"><div class="chart-title">Schlafqualität (letzte Nächte)</div><div class="chart-bars">';
+  for(const e of diary){
+    const h=Math.round((e.quality/5)*60);
+    const col=e.quality>=4?'#34C759':e.quality>=3?'#FF9500':'#FF3B30';
+    html+=`<div class="chart-bar-wrap"><div class="chart-bar" style="height:${h}px;background:${col}"></div><div class="chart-bar-label">${e.quality}★</div></div>`;
+  }
+  html+='</div></div>';
+  el.innerHTML=html;
+}
+
+// ──────────────────────────────────────────────────────
+//  SHOPPING
+// ──────────────────────────────────────────────────────
+function renderShop() {
+  const items=getShop(), el=document.getElementById('shop-list');
+  if(!items.length){el.innerHTML='<div class="empty"><div class="empty-icon">🎉</div>Alles besorgt!</div>';return;}
+  const sorted=[...items].sort((a,b)=>a.done-b.done);
+  let html='';
+  for(const it of sorted)html+=`<div class="card"><div class="shop-row" onclick="toggleShop('${it.id}')"><div class="shop-check ${it.done?'done':''}"></div><span class="shop-text ${it.done?'done':''}">${it.text}</span>${it.badge?`<span class="shop-badge">${it.badge}</span>`:''}<button class="shop-del" onclick="event.stopPropagation();delShop('${it.id}')">🗑</button></div></div>`;
+  const open=items.filter(i=>!i.done).length;
+  document.querySelector('#nav-besorg .nav-badge')?.remove();
+  if(open>0){const b=document.createElement('span');b.className='nav-badge';b.textContent=open;document.getElementById('nav-besorg').appendChild(b);}
+  el.innerHTML=html;
+}
+function toggleShop(id){const s=getShop();const i=s.find(x=>x.id===id);if(i)i.done=!i.done;saveShop(s);renderShop();}
+function delShop(id){saveShop(getShop().filter(x=>x.id!==id));renderShop();}
+function addShop(){const inp=document.getElementById('shop-input');const text=inp.value.trim();if(!text)return;const s=getShop();s.unshift({id:'c'+Date.now(),text,badge:'',done:false});saveShop(s);inp.value='';renderShop();}
+
+// ──────────────────────────────────────────────────────
+//  NOTES
+// ──────────────────────────────────────────────────────
+function renderNotes(){
+  const notes=getNotes(),el=document.getElementById('notes-list');
+  if(!notes.length){el.innerHTML='<div class="empty"><div class="empty-icon">📋</div>Noch keine Notizen.</div>';return;}
+  let html='';
+  for(const n of notes)html+=`<div class="note-card fade-up"><div class="note-header"><span class="note-title">${n.title}</span><span class="note-date">${fmtDate(n.date)}</span><button class="note-del" onclick="delNote('${n.id}')">🗑</button></div><div class="note-body">${n.body.replace(/\n/g,'<br>')}</div></div>`;
+  el.innerHTML=html;
+}
+function saveNote(){
+  const title=document.getElementById('note-title').value.trim(),body=document.getElementById('note-body').value.trim();
+  if(!body){alert('Bitte Text eingeben.');return;}
+  const notes=getNotes();
+  notes.unshift({id:'n'+Date.now(),date:isoToday(),title:title||'Notiz',body});
+  saveNotes(notes);
+  document.getElementById('note-title').value='';document.getElementById('note-body').value='';
+  renderNotes();toast('✅ Notiz gespeichert!');
+}
+function delNote(id){if(!confirm('Notiz löschen?'))return;saveNotes(getNotes().filter(n=>n.id!==id));renderNotes();}
+
+// ──────────────────────────────────────────────────────
+//  SHORTCUTS ACCORDION
+// ──────────────────────────────────────────────────────
+function toggleAuto(id) {
+  const steps=document.getElementById('steps-'+id);
+  const chev=document.getElementById('chev-'+id);
+  const isOpen=steps.style.display!=='none';
+  steps.style.display=isOpen?'none':'block';
+  chev.textContent=isOpen?'›':'⌄';
+  chev.classList.toggle('open',!isOpen);
+}
+
+// ──────────────────────────────────────────────────────
+//  NAVIGATION
+// ──────────────────────────────────────────────────────
+const TAB_TITLES={heute:'🌙 Mein Schlafplan',nacht:'📓 Nacht-Tagebuch',besorgungen:'🛒 Besorgungen',notizen:'📋 Diagnosen & Notizen',reminder:'🔔 Push & Alarm'};
+function switchTab(tab,navEl){
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  navEl.classList.add('active');
+  document.getElementById('headerTitle').textContent=TAB_TITLES[tab];
+  const isHeute=tab==='heute';
+  document.getElementById('progBar').style.display=isHeute?'block':'none';
+  document.getElementById('progText').style.display=isHeute?'block':'none';
+  document.getElementById('weekBadge').style.display=isHeute?'block':'none';
+}
+
+// ──────────────────────────────────────────────────────
+//  BANNER
+// ──────────────────────────────────────────────────────
+function dismissBanner(){document.getElementById('install-hint').style.display='none';set('sp_banner',true);}
+
+// ──────────────────────────────────────────────────────
+//  TOAST
+// ──────────────────────────────────────────────────────
+function toast(msg){
+  const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),380);},2200);
+}
+
+// ──────────────────────────────────────────────────────
+//  INIT
+// ──────────────────────────────────────────────────────
+function init() {
+  const now=new Date();
+  document.getElementById('dateDisplay').textContent=now.toLocaleDateString('de-CH',{weekday:'long',day:'numeric',month:'long'});
+  if(!get('sp_start_date',null))set('sp_start_date',isoToday());
+  const start=new Date(get('sp_start_date',isoToday()));
+  const week=Math.min(4,Math.floor((now-start)/86400000/7)+1);
+  document.getElementById('weekBadge').textContent=`Woche ${week}/4`;
+  if(get('sp_banner',false))document.getElementById('install-hint').style.display='none';
+  if(!localStorage.getItem('sp_shop'))saveShop(DEFAULT_SHOP.map(x=>({...x})));
+
+  renderTasks();
+  renderNotifStatus();
+  initDiaryDate();
+  renderDiaryHistory();
+  renderChart();
+  renderShop();
+  renderNotes();
+
+  // Check overdue and schedule next if permission already granted
+  if('Notification' in window && Notification.permission==='granted'){
+    checkOverdue();
+    scheduleNextReminder();
+  }
+}
+
+init();
+</script>
+</body>
+</html>
