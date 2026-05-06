@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Schlafplan">
-<title>Mein Schlafplan</title>
+<meta name="apple-mobile-web-app-title" content="Gesundheit">
+<title>Mein Gesundheits-Begleiter</title>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 :root {
@@ -219,7 +219,7 @@ textarea{resize:none;}
 <div class="header" id="header">
   <div class="header-row">
     <div>
-      <h1 id="headerTitle">🌙 Schlafplan</h1>
+      <h1 id="headerTitle">💙 Mein Gesundheits-Begleiter</h1>
       <div class="date" id="dateDisplay"></div>
     </div>
     <div class="week-badge" id="weekBadge"></div>
@@ -249,7 +249,7 @@ textarea{resize:none;}
   <!-- ══════════ NACHT ══════════ -->
   <div class="tab-content" id="tab-nacht">
     <div class="sec-title">Nacht-Tagebuch</div>
-    <div class="sec-sub">1 Eintrag pro Nacht – nach 4 Wochen Gold wert.</div>
+    <div class="sec-sub">1 Eintrag pro Nacht – dein dauerhaftes Gesundheits-Tagebuch.</div>
     <div id="chart-section"></div>
     <div class="form-section">
       <h3>Letzte Nacht eintragen</h3>
@@ -306,7 +306,7 @@ textarea{resize:none;}
           <span style="font-size:13px;color:var(--text2);">Alle 4-Wochen-Daten für Analyse exportieren</span>
         </div>
       </div>
-      <p style="font-size:14px;color:var(--text2);margin-bottom:14px;line-height:1.5;">Kopiert Tagebuch, Symptome & Aufgaben-Adherence als Text – einfach zu Claude einfügen und Diagnose erhalten.</p>
+      <p style="font-size:14px;color:var(--text2);margin-bottom:14px;line-height:1.5;">Kopiert alle Tagebuch-Daten als Text – einfach zu Claude einfügen für eine Analyse und medizinische Begleitung.</p>
       <button class="btn-primary" style="background:linear-gradient(135deg,#5E5CE6,#007AFF);" onclick="generateClaudeReport()">📋 Bericht kopieren</button>
       <div id="bericht-preview"></div>
     </div>
@@ -868,7 +868,7 @@ function toggleAuto(id) {
 // ──────────────────────────────────────────────────────
 //  NAVIGATION
 // ──────────────────────────────────────────────────────
-const TAB_TITLES={heute:'🌙 Mein Schlafplan',nacht:'📓 Nacht-Tagebuch',besorgungen:'🛒 Besorgungen',notizen:'📋 Diagnosen & Notizen',reminder:'🔔 Push & Alarm'};
+const TAB_TITLES={heute:'💙 Mein Gesundheits-Begleiter',nacht:'📓 Nacht-Tagebuch',besorgungen:'🛒 Besorgungen',notizen:'📋 Diagnosen & Notizen',reminder:'🔔 Push & Alarm'};
 function switchTab(tab,navEl){
   document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -903,8 +903,9 @@ function init() {
   document.getElementById('dateDisplay').textContent=now.toLocaleDateString('de-CH',{weekday:'long',day:'numeric',month:'long'});
   if(!get('sp_start_date',null))set('sp_start_date',isoToday());
   const start=new Date(get('sp_start_date',isoToday()));
-  const week=Math.min(4,Math.floor((now-start)/86400000/7)+1);
-  document.getElementById('weekBadge').textContent=`Woche ${week}/4`;
+  const daysPassed=Math.max(0,Math.round((now-start)/86400000));
+  const week=Math.floor(daysPassed/7)+1;
+  document.getElementById('weekBadge').textContent=`Woche ${week} · Tag ${daysPassed+1}`;
   if(get('sp_banner',false))document.getElementById('install-hint').style.display='none';
   if(!localStorage.getItem('sp_shop'))saveShop(DEFAULT_SHOP.map(x=>({...x})));
 
@@ -953,11 +954,11 @@ function renderClaudeReminder() {
   const daysLeft  = 28 - daysInCycle;
   const isNewCycle = daysInCycle === 0 && currentCycle > 1;
   const headline  = isNewCycle
-    ? `🔔 4 Wochen vorbei – Claude-Bericht fällig!`
-    : `🔔 Noch ${daysLeft} Tag${daysLeft===1?'':'e'} – Claude-Bericht vorbereiten`;
+    ? `🔔 Zyklus ${currentCycle - 1} abgeschlossen – Bericht fällig!`
+    : `🔔 Noch ${daysLeft} Tag${daysLeft===1?'':'e'} bis zum Claude-Bericht`;
   const subtext   = isNewCycle
-    ? `Zyklus ${currentCycle - 1} ist abgeschlossen. Jetzt den Bericht generieren und zur Analyse zu Claude senden.`
-    : `In ${daysLeft} Tag${daysLeft===1?'':'en'} ist dein ${currentCycle}. 4-Wochen-Zyklus vorbei. Dann Bericht zu Claude senden und Diagnose einholen.`;
+    ? `4 Wochen sind vorbei. Jetzt den Bericht generieren und Claude zur Analyse schicken – dann startet Zyklus ${currentCycle}.`
+    : `In ${daysLeft} Tag${daysLeft===1?'':'en'} endet Zyklus ${currentCycle}. Bericht generieren und zu Claude senden für eine medizinische Einschätzung.`;
 
   el.innerHTML = `
     <div class="claude-reminder fade-up">
@@ -985,11 +986,14 @@ function generateClaudeReport() {
   const notes   = getNotes();
   const start   = get('sp_start_date', isoToday());
   const now     = new Date();
-  const daysPassed = Math.max(0, Math.round((now - new Date(start)) / 86400000));
+  const daysPassed  = Math.max(0, Math.round((now - new Date(start)) / 86400000));
+  const currentCycleNum = Math.floor(daysPassed / 28) + 1;
+  const daysInThisCycle = daysPassed % 28;
 
-  // Collect daily adherence
+  // Collect daily adherence (last 28 days only)
   const adherenceData = [];
-  for (let i = 0; i <= daysPassed; i++) {
+  const cycleStartDay = (currentCycleNum - 1) * 28;
+  for (let i = cycleStartDay; i <= daysPassed; i++) {
     const d = new Date(start); d.setDate(d.getDate() + i);
     const key = `sp_day_${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
     const checks = get(key, {});
@@ -1002,22 +1006,29 @@ function generateClaudeReport() {
   const avgAdh = adherenceData.length
     ? Math.round(adherenceData.reduce((s,d)=>s+d.pct,0)/adherenceData.length) : 0;
 
-  // Symptom stats
-  const schleimJa   = diary.filter(e=>e.schleim===true).length;
-  const hustenJa    = diary.filter(e=>e.husten===true).length;
-  const avgQuality  = diary.length ? (diary.reduce((s,e)=>s+e.quality,0)/diary.length).toFixed(1) : '–';
-  const avgWoke     = diary.length ? (diary.reduce((s,e)=>s+e.woke,0)/diary.length).toFixed(1) : '–';
+  // Symptom stats (this cycle only)
+  const schleimJa   = diaryThisCycle.filter(e=>e.schleim===true).length;
+  const hustenJa    = diaryThisCycle.filter(e=>e.husten===true).length;
+  const avgQuality  = diaryThisCycle.length ? (diaryThisCycle.reduce((s,e)=>s+e.quality,0)/diaryThisCycle.length).toFixed(1) : '–';
+  const avgWoke     = diaryThisCycle.length ? (diaryThisCycle.reduce((s,e)=>s+e.woke,0)/diaryThisCycle.length).toFixed(1) : '–';
 
-  let r = `# 4-Wochen-Gesundheits-Bericht
+  // Last 28 diary entries for this cycle
+  const cycleStartDate = new Date(start);
+  cycleStartDate.setDate(cycleStartDate.getDate() + cycleStartDay);
+  const cycleStartStr = `${cycleStartDate.getFullYear()}-${p2(cycleStartDate.getMonth()+1)}-${p2(cycleStartDate.getDate())}`;
+  const diaryThisCycle = diary.filter(e => e.date >= cycleStartStr);
+
+  let r = `# Gesundheits-Bericht – Zyklus ${currentCycleNum}
 
 ## Patient
 - Name: Markus Baelli
 - Alter: 57 Jahre, 177 cm, ca. 90 kg
 - Hauptproblem: Nächtliche Schleim- und Atembeschwerden (tagsüber beschwerdefrei)
-- Test-Start: ${start}
-- Heute: ${isoToday()} (Tag ${daysPassed + 1} von 28)
+- Programm-Start: ${start}
+- Zyklus ${currentCycleNum}: ${cycleStartStr} → ${isoToday()} (Tag ${daysInThisCycle + 1} von 28)
+- Gesamt-Begleittage: ${daysPassed + 1}
 
-## Medikamente (4-Wochen-Test)
+## Medikamente (Dauermedikation)
 - Dexilant 60 mg – täglich 06:30, nüchtern, 30 Min vor Frühstück
 - Perindopril 8 mg – täglich 06:30
 - Gaviscon Advance 10 ml – täglich 22:00, nach Zähneputzen
@@ -1028,14 +1039,14 @@ function generateClaudeReport() {
 - Tages-Details:
 ${adherenceData.map(d=>`  ${d.date}: ${d.pct}% (${d.done}/${d.total})`).join('\n')}
 
-## Nacht-Tagebuch (${diary.length} Einträge)
+## Nacht-Tagebuch – Zyklus ${currentCycleNum} (${diaryThisCycle.length} Einträge)
 - Ø Schlafqualität: ${avgQuality}/5 ★
 - Ø Aufwachen pro Nacht: ${avgWoke}×
-- Nächte mit Schleim: ${schleimJa}/${diary.length}
-- Nächte mit Husten: ${hustenJa}/${diary.length}
+- Nächte mit Schleim: ${schleimJa}/${diaryThisCycle.length}
+- Nächte mit Husten: ${hustenJa}/${diaryThisCycle.length}
 
 ### Alle Einträge (chronologisch):
-${[...diary].reverse().map(e=>`
+${[...diaryThisCycle].reverse().map(e=>`
 ${e.date}
   Schlafqualität: ${'★'.repeat(e.quality)}${'☆'.repeat(5-e.quality)} (${e.quality}/5)
   Aufgewacht: ${e.woke}×
@@ -1043,10 +1054,10 @@ ${e.date}
   Husten: ${e.husten===true?'JA':e.husten===false?'Nein':'–'}${e.note?'\n  Notiz: '+e.note:''}`).join('\n') || '  (Noch keine Einträge)'}
 `;
 
-  if (diary.length >= 4) {
-    const mid = Math.floor(diary.length / 2);
-    const first = diary.slice(mid).reverse();
-    const second = diary.slice(0, mid).reverse();
+  if (diaryThisCycle.length >= 4) {
+    const mid = Math.floor(diaryThisCycle.length / 2);
+    const first = diaryThisCycle.slice(mid).reverse();
+    const second = diaryThisCycle.slice(0, mid).reverse();
     const q1 = (first.reduce((s,e)=>s+e.quality,0)/first.length).toFixed(1);
     const q2 = (second.reduce((s,e)=>s+e.quality,0)/second.length).toFixed(1);
     const s1 = first.filter(e=>e.schleim===true).length;
