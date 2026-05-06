@@ -196,6 +196,14 @@ textarea{resize:none;}
 .week-day-pct{font-size:12px;font-weight:700;}
 .week-day-dot{width:10px;height:10px;border-radius:50%;}
 
+/* CLAUDE REMINDER BANNER */
+.claude-reminder{background:linear-gradient(135deg,#5E5CE6,#007AFF);color:white;border-radius:14px;padding:16px;margin-bottom:12px;position:relative;}
+.claude-reminder strong{display:block;font-size:16px;font-weight:700;margin-bottom:5px;}
+.claude-reminder p{font-size:13px;line-height:1.5;opacity:0.93;margin-bottom:12px;}
+.claude-reminder-btn{background:rgba(255,255,255,0.22);border:1.5px solid rgba(255,255,255,0.5);color:white;border-radius:10px;padding:9px 16px;font-size:14px;font-weight:600;cursor:pointer;margin-right:8px;}
+.claude-reminder-btn:active{opacity:0.7;}
+.claude-reminder-btn.primary{background:white;color:#5E5CE6;border-color:white;}
+
 /* MISC */
 .sec-title{font-size:20px;font-weight:700;margin-bottom:3px;}
 .sec-sub{font-size:14px;color:var(--text2);margin-bottom:14px;}
@@ -232,6 +240,7 @@ textarea{resize:none;}
       <p>Safari → Teilen-Symbol <strong>⬆</strong> → <strong>„Zum Home-Bildschirm"</strong> → Fertig. Dann hast du eine echte App-Ikone!</p>
     </div>
     <div id="notif-status-card"></div>
+    <div id="claude-report-reminder"></div>
     <div id="overdue-card"></div>
     <div id="week-progress-row"></div>
     <div id="task-list"></div>
@@ -287,6 +296,20 @@ textarea{resize:none;}
       <button class="btn-primary" onclick="saveDiaryEntry()">Eintrag speichern</button>
     </div>
     <div id="diary-history"></div>
+
+    <!-- Claude Bericht -->
+    <div class="form-section" style="background:linear-gradient(135deg,#EEF2FF,#F5EEFF);border:1.5px solid #C5D0FF;margin-top:4px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+        <span style="font-size:28px;">🤖</span>
+        <div>
+          <strong style="display:block;font-size:16px;">Claude-Bericht</strong>
+          <span style="font-size:13px;color:var(--text2);">Alle 4-Wochen-Daten für Analyse exportieren</span>
+        </div>
+      </div>
+      <p style="font-size:14px;color:var(--text2);margin-bottom:14px;line-height:1.5;">Kopiert Tagebuch, Symptome & Aufgaben-Adherence als Text – einfach zu Claude einfügen und Diagnose erhalten.</p>
+      <button class="btn-primary" style="background:linear-gradient(135deg,#5E5CE6,#007AFF);" onclick="generateClaudeReport()">📋 Bericht kopieren</button>
+      <div id="bericht-preview"></div>
+    </div>
   </div>
 
   <!-- ══════════ BESORGUNGEN ══════════ -->
@@ -887,6 +910,7 @@ function init() {
 
   renderTasks();
   renderNotifStatus();
+  renderClaudeReminder();
   initDiaryDate();
   renderDiaryHistory();
   renderChart();
@@ -898,6 +922,169 @@ function init() {
     checkOverdue();
     scheduleNextReminder();
   }
+}
+
+// ──────────────────────────────────────────────────────
+//  CLAUDE REMINDER BANNER
+// ──────────────────────────────────────────────────────
+function renderClaudeReminder() {
+  const el = document.getElementById('claude-report-reminder');
+  if (!el) return;
+
+  const start     = get('sp_start_date', isoToday());
+  const startDate = new Date(start);
+  const now       = new Date();
+  const daysPassed = Math.max(0, Math.round((now - startDate) / 86400000));
+
+  // Show every 28 days (day 28, 56, 84 …)
+  // A "cycle" is which 28-day block we're in (1-based)
+  const currentCycle = Math.floor(daysPassed / 28) + 1;  // 1 during days 0-27, 2 during 28-55 …
+  const cycleStart   = (currentCycle - 1) * 28;           // first day of this cycle
+  const daysInCycle  = daysPassed - cycleStart;            // 0..27
+
+  // Only show the banner during the LAST 3 days of each cycle (day 25-27 within cycle)
+  // OR on day 0 of a new cycle if user hasn't dismissed it yet for this cycle
+  const lastDismissed = get('sp_claude_reminder_dismissed_cycle', 0);
+  const shouldShow = (daysInCycle >= 25 || daysInCycle === 0 && currentCycle > 1)
+                     && lastDismissed < currentCycle;
+
+  if (!shouldShow) { el.innerHTML = ''; return; }
+
+  const daysLeft  = 28 - daysInCycle;
+  const isNewCycle = daysInCycle === 0 && currentCycle > 1;
+  const headline  = isNewCycle
+    ? `🔔 4 Wochen vorbei – Claude-Bericht fällig!`
+    : `🔔 Noch ${daysLeft} Tag${daysLeft===1?'':'e'} – Claude-Bericht vorbereiten`;
+  const subtext   = isNewCycle
+    ? `Zyklus ${currentCycle - 1} ist abgeschlossen. Jetzt den Bericht generieren und zur Analyse zu Claude senden.`
+    : `In ${daysLeft} Tag${daysLeft===1?'':'en'} ist dein ${currentCycle}. 4-Wochen-Zyklus vorbei. Dann Bericht zu Claude senden und Diagnose einholen.`;
+
+  el.innerHTML = `
+    <div class="claude-reminder fade-up">
+      <button class="banner-close" style="color:white;opacity:0.7;" onclick="dismissClaudeReminder()">✕</button>
+      <strong>${headline}</strong>
+      <p>${subtext}</p>
+      <button class="claude-reminder-btn primary" onclick="switchTab('nacht', document.querySelectorAll('.nav-item')[1]); dismissClaudeReminder();">📋 Bericht generieren</button>
+      <button class="claude-reminder-btn" onclick="dismissClaudeReminder()">Später</button>
+    </div>`;
+}
+
+function dismissClaudeReminder() {
+  const start      = get('sp_start_date', isoToday());
+  const daysPassed = Math.max(0, Math.round((new Date() - new Date(start)) / 86400000));
+  const cycle      = Math.floor(daysPassed / 28) + 1;
+  set('sp_claude_reminder_dismissed_cycle', cycle);
+  document.getElementById('claude-report-reminder').innerHTML = '';
+}
+
+// ──────────────────────────────────────────────────────
+//  CLAUDE REPORT
+// ──────────────────────────────────────────────────────
+function generateClaudeReport() {
+  const diary   = getDiary();
+  const notes   = getNotes();
+  const start   = get('sp_start_date', isoToday());
+  const now     = new Date();
+  const daysPassed = Math.max(0, Math.round((now - new Date(start)) / 86400000));
+
+  // Collect daily adherence
+  const adherenceData = [];
+  for (let i = 0; i <= daysPassed; i++) {
+    const d = new Date(start); d.setDate(d.getDate() + i);
+    const key = `sp_day_${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`;
+    const checks = get(key, {});
+    const done = TASKS.filter(t => checks[t.id]).length;
+    adherenceData.push({
+      date: `${d.getFullYear()}-${p2(d.getMonth()+1)}-${p2(d.getDate())}`,
+      done, total: TASKS.length, pct: Math.round(done / TASKS.length * 100)
+    });
+  }
+  const avgAdh = adherenceData.length
+    ? Math.round(adherenceData.reduce((s,d)=>s+d.pct,0)/adherenceData.length) : 0;
+
+  // Symptom stats
+  const schleimJa   = diary.filter(e=>e.schleim===true).length;
+  const hustenJa    = diary.filter(e=>e.husten===true).length;
+  const avgQuality  = diary.length ? (diary.reduce((s,e)=>s+e.quality,0)/diary.length).toFixed(1) : '–';
+  const avgWoke     = diary.length ? (diary.reduce((s,e)=>s+e.woke,0)/diary.length).toFixed(1) : '–';
+
+  let r = `# 4-Wochen-Gesundheits-Bericht
+
+## Patient
+- Name: Markus Baelli
+- Alter: 57 Jahre, 177 cm, ca. 90 kg
+- Hauptproblem: Nächtliche Schleim- und Atembeschwerden (tagsüber beschwerdefrei)
+- Test-Start: ${start}
+- Heute: ${isoToday()} (Tag ${daysPassed + 1} von 28)
+
+## Medikamente (4-Wochen-Test)
+- Dexilant 60 mg – täglich 06:30, nüchtern, 30 Min vor Frühstück
+- Perindopril 8 mg – täglich 06:30
+- Gaviscon Advance 10 ml – täglich 22:00, nach Zähneputzen
+
+## Aufgaben-Adherence (Tages-Checkliste)
+- Tage mit Daten: ${adherenceData.filter(d=>d.done>0).length}
+- Durchschnittliche Erfüllung: ${avgAdh}%
+- Tages-Details:
+${adherenceData.map(d=>`  ${d.date}: ${d.pct}% (${d.done}/${d.total})`).join('\n')}
+
+## Nacht-Tagebuch (${diary.length} Einträge)
+- Ø Schlafqualität: ${avgQuality}/5 ★
+- Ø Aufwachen pro Nacht: ${avgWoke}×
+- Nächte mit Schleim: ${schleimJa}/${diary.length}
+- Nächte mit Husten: ${hustenJa}/${diary.length}
+
+### Alle Einträge (chronologisch):
+${[...diary].reverse().map(e=>`
+${e.date}
+  Schlafqualität: ${'★'.repeat(e.quality)}${'☆'.repeat(5-e.quality)} (${e.quality}/5)
+  Aufgewacht: ${e.woke}×
+  Schleim: ${e.schleim===true?'JA':e.schleim===false?'Nein':'–'}
+  Husten: ${e.husten===true?'JA':e.husten===false?'Nein':'–'}${e.note?'\n  Notiz: '+e.note:''}`).join('\n') || '  (Noch keine Einträge)'}
+`;
+
+  if (diary.length >= 4) {
+    const mid = Math.floor(diary.length / 2);
+    const first = diary.slice(mid).reverse();
+    const second = diary.slice(0, mid).reverse();
+    const q1 = (first.reduce((s,e)=>s+e.quality,0)/first.length).toFixed(1);
+    const q2 = (second.reduce((s,e)=>s+e.quality,0)/second.length).toFixed(1);
+    const s1 = first.filter(e=>e.schleim===true).length;
+    const s2 = second.filter(e=>e.schleim===true).length;
+    r += `
+## Trend-Vergleich
+- Schlafqualität 1. Hälfte (${first.length} Nächte): Ø ${q1}/5
+- Schlafqualität 2. Hälfte (${second.length} Nächte): Ø ${q2}/5
+- Schleim 1. Hälfte: ${s1}/${first.length} Nächten
+- Schleim 2. Hälfte: ${s2}/${second.length} Nächten
+`;
+  }
+
+  if (notes.length > 0) {
+    r += `\n## Notizen & Befunde\n`;
+    for (const n of notes) r += `\n### ${n.title} (${n.date})\n${n.body}\n`;
+  }
+
+  r += `\n---\nBericht erstellt: ${now.toLocaleDateString('de-CH')} ${now.toLocaleTimeString('de-CH',{hour:'2-digit',minute:'2-digit'})}`;
+
+  const prev = document.getElementById('bericht-preview');
+
+  navigator.clipboard.writeText(r).then(() => {
+    toast('✅ Kopiert! Jetzt in Claude einfügen.');
+    prev.innerHTML = `
+      <div style="margin-top:14px;background:var(--bg);border-radius:10px;padding:12px;border:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:6px;">Vorschau (${r.split('\n').length} Zeilen)</div>
+        <div style="font-size:12px;color:var(--text2);font-family:monospace;max-height:130px;overflow-y:auto;white-space:pre-wrap;line-height:1.5;">${r.substring(0,400)}…</div>
+        <div style="font-size:13px;color:#5E5CE6;font-weight:600;margin-top:10px;text-align:center;">✅ In Zwischenablage – jetzt bei Claude einfügen</div>
+      </div>`;
+  }).catch(() => {
+    prev.innerHTML = `
+      <div style="margin-top:14px;background:var(--bg);border-radius:10px;padding:12px;border:1px solid var(--border);">
+        <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;">Text manuell kopieren:</div>
+        <textarea style="width:100%;height:140px;font-size:11px;font-family:monospace;background:var(--card);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);" readonly>${r}</textarea>
+      </div>`;
+    toast('Bitte Text unten manuell kopieren.');
+  });
 }
 
 init();
